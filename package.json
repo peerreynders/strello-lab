@@ -1,6 +1,7 @@
 {
-  "name": "example-basic",
-  "type": "module",
+  "name": "strello-lab",
+  "version": "0.0.0",
+	"type": "module",
   "scripts": {
     "dev": "vinxi dev",
     "build": "vinxi build",
@@ -10,7 +11,18 @@
     "lint:es": "eslint --config ./eslint.config.js",
     "init-repo": "node --import ts-blank-space/register ./init-repo.ts"
   },
-  "dependencies": {
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/peerreynders/strello-lab"
+  },
+  "keywords": [],
+  "author": "Peer Reynders",
+  "license": "MIT",
+  "homepage": "https://github.com/peerreynders/strello-lab",
+  "bugs": {
+    "url": "https://github.com/peerreynders/strello-lab/issues"
+  },
+	"dependencies": {
     "@solidjs/meta": "^0.29.4",
     "@solidjs/router": "^0.15.0",
     "@solidjs/start": "^1.0.10",
@@ -20,7 +32,7 @@
     "vinxi": "^0.4.3"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=20"
   },
   "devDependencies": {
     "@eslint/js": "^9.16.0",
