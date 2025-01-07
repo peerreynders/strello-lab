@@ -147,6 +147,11 @@ export type ColumnMoveInfo = {
 	bracketColumn?: ColumnInfo; // before ? (bracketColumn places before moving column) : (bracketColumn places after moving column)
 }; // relationNote is required though bracketNote may not exist
 
+export type BoardDelete = {
+	refId: string;
+	updatedAt: number;
+};
+
 const DRAG_TYPES = {
 	note: 'application/note',
 	column: 'application/column',

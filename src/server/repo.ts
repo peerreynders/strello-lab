@@ -102,6 +102,73 @@ async function boardById(
 	};
 }
 
+async function appendBoard(
+	accountId: string,
+	interimId: string | undefined,
+	title: string,
+	color: string
+) {
+	const boards = await readBoards(accountId);
+	const id = makeId();
+	const updatedAt = msSinceEpoch();
+
+	const board = interimId
+		? {
+				id,
+				updatedAt,
+				title,
+				color,
+				interimId,
+			}
+		: {
+				id,
+				updatedAt,
+				title,
+				color,
+			};
+	boards.push(board);
+
+	await writeBoards(accountId, boards);
+	return board;
+}
+
+async function deleteBoard(accountId: string, id: string, updatedAt: number) {
+	const notesRead = readNotes(accountId);
+	const columnsRead = readColumns(accountId);
+	const boards = await readBoards(accountId);
+	const index = boards.findIndex((b) => b.id === id);
+	if (index < 0) return 0;
+
+	if (boards[index].updatedAt !== updatedAt)
+		throw new Error('Stale board delete');
+
+	// Remove associated columns and track removed columns
+	const [columns, cascadeIds] = (await columnsRead).reduce<
+		[Array<ColumnRecord>, Array<string>]
+	>(
+		(collect, column) => {
+			if (column.boardId !== id) collect[0].push(column);
+			else collect[1].push(column.id);
+			return collect;
+		},
+		[[], []]
+	);
+
+	// Remove notes associated with removed columns
+	const notes = (await notesRead).filter(
+		(n) => !cascadeIds.includes(n.columnId)
+	);
+
+	boards.splice(index, 1);
+
+	await Promise.all([
+		writeBoards(accountId, boards),
+		writeColumns(accountId, columns),
+		writeNotes(accountId, notes),
+	]);
+	return 1;
+}
+
 function selectBracketRank<T extends { rank: LexRank }>(
 	ranked: Array<T>,
 	fromIndex: number,
@@ -484,10 +551,12 @@ function initialize() {
 
 export {
 	initialize,
+	appendBoard,
 	appendColumn,
 	appendNote,
 	boardById,
 	boardsByAccount,
+	deleteBoard,
 	deleteColumn,
 	deleteNote,
 	editColumn,

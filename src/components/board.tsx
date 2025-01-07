@@ -1,5 +1,5 @@
 // file src/components/board.tsx
-import { For, batch, createEffect, createMemo, untrack } from 'solid-js';
+import { For, batch, createEffect, createMemo, on, untrack } from 'solid-js';
 import { useAction, useSubmissions } from '@solidjs/router';
 import { createStore, produce, reconcile } from 'solid-js/store';
 import { Column } from './column.js';
@@ -278,6 +278,7 @@ export function Board(props: Props) {
 		},
 	};
 
+	let columnsScrollToEnd = false;
 	const appendColumn = (title: string) => {
 		const boardRefId = props.data.board.refId;
 		// Not going to happen here
@@ -295,6 +296,8 @@ export function Board(props: Props) {
 			rank,
 			submitted: msSinceStart(),
 		});
+
+		columnsScrollToEnd = true;
 	};
 
 	const moveColumn = (
@@ -333,6 +336,18 @@ export function Board(props: Props) {
 	const rankedColumns = createMemo(() =>
 		boardStore.columns.slice().sort(byRankAsc)
 	);
+
+	let columnsContainer: HTMLDivElement | undefined;
+	createEffect(
+		on(rankedColumns, () => {
+			if (!columnsScrollToEnd) return;
+
+			columnsScrollToEnd = false;
+			columnsContainer &&
+				(columnsContainer.scrollLeft = columnsContainer.scrollWidth);
+		})
+	);
+
 	const columnAfter = (fromIndex: number) => {
 		const index = fromIndex + 1;
 		if (index < 0 || rankedColumns().length <= index) return undefined;
@@ -374,7 +389,7 @@ export function Board(props: Props) {
 	});
 
 	return (
-		<div class="c-board">
+		<div class="c-board" ref={columnsContainer}>
 			<ColumnGap
 				moveColumn={moveColumn}
 				before={undefined}

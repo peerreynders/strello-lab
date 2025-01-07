@@ -1,11 +1,13 @@
 // file: src/server/api.ts
 import { action, json, query, redirect } from '@solidjs/router';
-import { getAccount } from './session.js';
+import { getAccount as getAccountId } from './session.js';
 import {
 	boardById as bById,
 	boardsByAccount as bByAccount,
+	appendBoard as appendBoardRepo,
 	appendColumn,
 	appendNote,
+	deleteBoard as deleteBoardRepo,
 	deleteColumn,
 	deleteNote,
 	editColumn,
@@ -18,6 +20,7 @@ import {
 import type {
 	BoardCommand,
 	BoardData,
+	BoardDelete,
 	BoardInfo,
 	ColumnInfo,
 	NoteInfo,
@@ -27,6 +30,12 @@ import type { BoardResult } from './repo';
 type BoardRecord = BoardResult['board'];
 type ColumnRecord = BoardResult['columns'][number];
 type NoteRecord = BoardResult['notes'][number];
+
+const getAccount = query(async () => {
+	'use server';
+	const accountId = await getAccountId();
+	return { id: accountId, email: 'start@solidjs.com' };
+}, 'account');
 
 const fromBoardRecord = (r: BoardRecord): BoardInfo => ({
 	id: r.interimId ? r.interimId : r.id,
@@ -53,9 +62,40 @@ const fromNoteRecord = (r: NoteRecord): NoteInfo => ({
 	refId: r.id,
 });
 
+const boardsByAccount = query(async () => {
+	'use server';
+	const accountId = await getAccountId();
+	const boards = await bByAccount(accountId);
+	return boards.map(fromBoardRecord);
+}, 'boards-by-account');
+
+const appendBoard = action(async (data: FormData) => {
+	'use server';
+	const accountId = await getAccountId();
+	const title = String(data.get('title'));
+	const color = String(data.get('color'));
+
+	const board = await appendBoardRepo(accountId, undefined, title, color);
+
+	// Compel client to change to new board route
+	throw redirect(`/board/${board.id}`);
+}, 'append-board');
+
+const deleteBoard = action(async (c: BoardDelete) => {
+	'use server';
+	const accountId = await getAccountId();
+
+	// TODO this can throw for
+	// non-existent board (stale post-delete)
+	// delete based on stale data
+	const result = await deleteBoardRepo(accountId, c.refId, c.updatedAt);
+
+	return json(result, { revalidate: boardsByAccount.key });
+}, 'delete-board');
+
 const boardById = query(async (id: string) => {
 	'use server';
-	const accountId = await getAccount();
+	const accountId = await getAccountId();
 	const result = await bById(accountId, id);
 
 	if (!result) {
@@ -72,16 +112,9 @@ const boardById = query(async (id: string) => {
 	return boardData;
 }, 'board-by-id');
 
-const boardsByAccount = query(async () => {
-	'use server';
-	const accountId = await getAccount();
-	const boards = await bByAccount(accountId);
-	return boards;
-}, 'boards-by-account');
-
 const transformBoard = action(async (c: BoardCommand) => {
 	'use server';
-	const accountId = await getAccount();
+	const accountId = await getAccountId();
 	switch (c.kind) {
 		case 'columnAppend': {
 			await appendColumn(accountId, c.id, c.boardRefId, c.title);
@@ -161,4 +194,11 @@ const transformBoard = action(async (c: BoardCommand) => {
 	}
 }, 'transform-board');
 
-export { boardById, boardsByAccount, transformBoard };
+export {
+	appendBoard,
+	boardById,
+	boardsByAccount,
+	deleteBoard,
+	getAccount,
+	transformBoard,
+};

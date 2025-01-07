@@ -1,5 +1,5 @@
 // file: src/component/column.tsx
-import { For, createMemo, createSignal } from 'solid-js';
+import { For, createEffect, createMemo, createSignal, on } from 'solid-js';
 import { DRAG_TYPES } from '~/client-types.js';
 import { byRankAsc, fromMoveInfo } from '~/shared/shame.js';
 import { BsTrash, RiEditorDraggable } from './icons.js';
@@ -33,6 +33,17 @@ export function Column(props: Props) {
 		return props.boardNotes.filter(keepColumnNote).sort(byRankAsc);
 	});
 
+	let noteContainer: HTMLDivElement | undefined;
+	let notesScrollToEnd = false;
+	createEffect(
+		on(notes, () => {
+			if (!notesScrollToEnd) return;
+
+			notesScrollToEnd = false;
+			noteContainer && (noteContainer.scrollTop = noteContainer.scrollHeight);
+		})
+	);
+
 	const noteBefore = (fromIndex: number) => {
 		const index = fromIndex - 1;
 		if (index < 0 || notes().length <= index) return undefined;
@@ -52,8 +63,10 @@ export function Column(props: Props) {
 		moveNote: (moveRefId: string, updatedAt: number, info: NoteMoveInfo) =>
 			props.services.moveNote(props.column, moveRefId, updatedAt, info),
 	};
-	const appendNote = (body: string) =>
+	const appendNote = (body: string) => {
 		props.services.appendNote(props.column, body);
+		notesScrollToEnd = true;
+	};
 	const disabled = () => !props.column.refId;
 
 	// local
@@ -198,7 +211,7 @@ export function Column(props: Props) {
 					<BsTrash />
 				</button>
 			</div>
-			<div class="c-column__items">
+			<div class="c-column__items" ref={noteContainer}>
 				<For each={notes()}>
 					{(note, i) => (
 						<Note
