@@ -1,6 +1,11 @@
 // file: src/client-types.ts
 import type { LexRank } from '~/shared/lex-rank';
 
+export type AccountInfo = {
+	id: string;
+	email: string;
+};
+
 export type BoardInfo = {
 	id: string;
 	updatedAt: number;

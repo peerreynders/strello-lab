@@ -4,10 +4,26 @@ import { createStorage } from 'unstorage';
 import fsLiteDriver from 'unstorage/drivers/fs-lite';
 
 import { byRankAsc, makeId, msSinceEpoch } from '../shared/shame.js';
-import { LEXRANK, between, makeForward } from '../shared/lex-rank.js';
+import { LEXRANK, between } from '../shared/lex-rank.js';
 
-import type { BoardInfo, ColumnInfo, NoteInfo } from '../client-types';
+import type {
+	AccountInfo,
+	BoardInfo,
+	ColumnInfo,
+	NoteInfo,
+} from '../client-types';
 import type { LexRank } from '../shared/lex-rank';
+
+type AccountRecord = AccountInfo & {
+	updatedAt: number;
+};
+
+type PasswordRecord = {
+	accountId: string;
+	salt: string;
+	hash: string;
+	updatedAt: number;
+};
 
 // Assume when account is offline:
 // `interimIds` will be deleted
@@ -42,12 +58,18 @@ const storage = createStorage({
 	}),
 });
 
+const ACCOUNTS_KEY = 'accounts';
+const PASSWORDS_KEY = 'passwords';
 const boardsKey = (accountId: string) => `${accountId}:boards`;
 const columnsKey = (accountId: string) => `${accountId}:columns`;
 const notesKey = (accountId: string) => `${accountId}:notes`;
 
 const noneToEmpty = <T>(result: Array<T> | null | undefined): Array<T> =>
 	result || [];
+const readAccounts = () =>
+	storage.getItem<Array<AccountRecord>>(ACCOUNTS_KEY).then(noneToEmpty);
+const readPasswords = () =>
+	storage.getItem<Array<PasswordRecord>>(PASSWORDS_KEY).then(noneToEmpty);
 const readBoards = (accountId: string) =>
 	storage.getItem<Array<BoardRecord>>(boardsKey(accountId)).then(noneToEmpty);
 const readColumns = (accountId: string) =>
@@ -55,12 +77,38 @@ const readColumns = (accountId: string) =>
 const readNotes = (accountId: string) =>
 	storage.getItem<Array<NoteRecord>>(notesKey(accountId)).then(noneToEmpty);
 
+const writeAccounts = (accounts: Array<AccountRecord>) =>
+	storage.setItem(ACCOUNTS_KEY, accounts);
+const writePasswords = (accounts: Array<PasswordRecord>) =>
+	storage.setItem(PASSWORDS_KEY, accounts);
 const writeBoards = (accountId: string, boards: Array<BoardRecord>) =>
 	storage.setItem(boardsKey(accountId), boards);
 const writeColumns = (accountId: string, columns: Array<ColumnRecord>) =>
 	storage.setItem(columnsKey(accountId), columns);
 const writeNotes = (accountId: string, notes: Array<NoteRecord>) =>
 	storage.setItem(notesKey(accountId), notes);
+
+async function accountByEmail(
+	email: string,
+	password: string,
+	hashPassword: (salt: string, password: string) => string
+) {
+	const passwordsRead = readPasswords();
+	const accounts = await readAccounts();
+	const accountIndex = accounts.findIndex((record) => record.email === email);
+	if (accountIndex < 0) return undefined;
+
+	const account = accounts[accountIndex];
+	const passwords = await passwordsRead;
+	const passwordIndex = passwords.findIndex(
+		(record) => record.accountId === account.id
+	);
+	if (passwordIndex < 0) return undefined;
+
+	const record = passwords[passwordIndex];
+	const hash = hashPassword(record.salt, password);
+	return hash === record.hash ? account : false;
+}
 
 const boardsByAccount = (accountId: string): Promise<Array<BoardRecord>> =>
 	readBoards(accountId);
@@ -102,11 +150,70 @@ async function boardById(
 	};
 }
 
+async function createAccount(
+	email: string,
+	password: string,
+	fromPassword: (password: string) => [salt: string, hash: string]
+) {
+	const accounts = await readAccounts();
+	const existingIndex = accounts.findIndex((record) => record.email === email);
+	if (existingIndex > -1) return undefined;
+
+	const passwordsRead = readPasswords();
+
+	const account = { id: makeId(), email, updatedAt: msSinceEpoch() };
+	accounts.push(account);
+
+	const [salt, hash] = fromPassword(password);
+	const passwords = await passwordsRead;
+	passwords.push({
+		accountId: account.id,
+		salt,
+		hash,
+		updatedAt: account.updatedAt,
+	});
+
+	await Promise.all([
+		writeAccounts(accounts),
+		writePasswords(passwords),
+		writeBoards(account.id, []),
+		writeColumns(account.id, []),
+		writeNotes(account.id, []),
+	]);
+
+	return account;
+}
+
+async function removeAccount(accountId: string) {
+	const accounts = await readAccounts();
+	const accountIndex = accounts.findIndex((record) => record.id === accountId);
+	if (accountIndex < 0) return 0;
+
+	const passwords = await readPasswords();
+	const passwordIndex = passwords.findIndex(
+		(record) => record.accountId === accountId
+	);
+	if (passwordIndex > -1) {
+		passwords.splice(passwordIndex, 1);
+	}
+	accounts.splice(accountIndex, 1);
+
+	await Promise.all([
+		writeAccounts(accounts),
+		writePasswords(passwords),
+		writeBoards(accountId, []),
+		writeColumns(accountId, []),
+		writeNotes(accountId, []),
+	]);
+
+	return 1;
+}
+
 async function appendBoard(
 	accountId: string,
-	interimId: string | undefined,
 	title: string,
-	color: string
+	color: string,
+	interimId?: string
 ) {
 	const boards = await readBoards(accountId);
 	const id = makeId();
@@ -184,9 +291,9 @@ function selectBracketRank<T extends { rank: LexRank }>(
 
 async function appendColumn(
 	accountId: string,
-	interimId: string,
 	boardId: string,
-	title: string
+	title: string,
+	interimId?: string
 ) {
 	const columns = await readColumns(accountId);
 
@@ -205,14 +312,24 @@ async function appendColumn(
 	const rank = lastBoardColumn
 		? between(lastBoardColumn.rank)
 		: LEXRANK.initialMin;
-	const column = {
-		id: makeId(),
-		updatedAt: msSinceEpoch(),
-		rank,
-		title,
-		boardId,
-		interimId,
-	};
+	const id = makeId();
+	const updatedAt = msSinceEpoch();
+	const column = interimId
+		? {
+				id,
+				updatedAt,
+				rank,
+				title,
+				boardId,
+				interimId,
+			}
+		: {
+				id,
+				updatedAt,
+				rank,
+				title,
+				boardId,
+			};
 	columns.push(column);
 
 	await writeColumns(accountId, columns);
@@ -296,9 +413,9 @@ async function moveColumn(
 
 async function appendNote(
 	accountId: string,
-	interimId: string,
 	columnId: string,
-	body: string
+	body: string,
+	interimId?: string
 ) {
 	const notes = await readNotes(accountId);
 
@@ -317,14 +434,24 @@ async function appendNote(
 	const rank = lastColumnNote
 		? between(lastColumnNote.rank)
 		: LEXRANK.initialMin;
-	const note = {
-		id: makeId(),
-		updatedAt: msSinceEpoch(),
-		rank,
-		body,
-		columnId,
-		interimId,
-	};
+	const id = makeId();
+	const updatedAt = msSinceEpoch();
+	const note = interimId
+		? {
+				id,
+				updatedAt,
+				rank,
+				body,
+				columnId,
+				interimId,
+			}
+		: {
+				id,
+				updatedAt,
+				rank,
+				body,
+				columnId,
+			};
 	notes.push(note);
 
 	await writeNotes(accountId, notes);
@@ -429,139 +556,21 @@ function moveNote(
 	return _moveNote(accountId, id, updatedAt, columnId, before, otherNoteId);
 }
 
-const ACCOUNT_ID = 'TQo9FY5r5Xqiaozly8odF';
-
-// TS treats IterableResult as a discriminated union
-function nextFrom(i: IterableIterator<LexRank>) {
-	const next = i.next();
-	return !next.done ? next.value : LEXRANK.initialMax;
-}
-
-function initialize() {
-	const boards: Array<BoardRecord> = [];
-	const columns: Array<ColumnRecord> = [];
-	const notes: Array<NoteRecord> = [];
-
-	let board = {
-		id: makeId(),
-		updatedAt: msSinceEpoch(),
-		title: 'backlog',
-		color: '#a2deff',
-	};
-	boards.push(board);
-
-	let crIter = makeForward();
-	let column = {
-		id: makeId(),
-		updatedAt: msSinceEpoch(),
-		title: 'test',
-		rank: nextFrom(crIter),
-		boardId: board.id,
-	};
-	columns.push(column);
-
-	let nrIter = makeForward();
-	let note = {
-		id: makeId(),
-		updatedAt: msSinceEpoch(),
-		rank: nextFrom(nrIter),
-		body: 'abc',
-		columnId: column.id,
-	};
-	notes.push(note);
-
-	note = {
-		id: makeId(),
-		updatedAt: msSinceEpoch(),
-		rank: nextFrom(nrIter),
-		body: 'def',
-		columnId: column.id,
-	};
-	notes.push(note);
-
-	board = {
-		id: makeId(),
-		updatedAt: msSinceEpoch(),
-		title: 'In progress',
-		color: '#a2deff',
-	};
-	boards.push(board);
-
-	board = {
-		id: makeId(),
-		updatedAt: msSinceEpoch(),
-		title: 'qwe',
-		color: '#702a56',
-	};
-	boards.push(board);
-
-	crIter = makeForward();
-	column = {
-		id: makeId(),
-		updatedAt: msSinceEpoch(),
-		title: 'test 123',
-		rank: nextFrom(crIter),
-		boardId: board.id,
-	};
-	columns.push(column);
-
-	column = {
-		id: makeId(),
-		updatedAt: msSinceEpoch(),
-		title: 'test 456',
-		rank: nextFrom(crIter),
-		boardId: board.id,
-	};
-	columns.push(column);
-
-	column = {
-		id: makeId(),
-		updatedAt: msSinceEpoch(),
-		title: 'test 789',
-		rank: nextFrom(crIter),
-		boardId: board.id,
-	};
-	columns.push(column);
-
-	nrIter = makeForward();
-	note = {
-		id: makeId(),
-		updatedAt: msSinceEpoch(),
-		rank: nextFrom(nrIter),
-		body: 'abc',
-		columnId: column.id,
-	};
-	notes.push(note);
-
-	note = {
-		id: makeId(),
-		updatedAt: msSinceEpoch(),
-		rank: nextFrom(nrIter),
-		body: 'def',
-		columnId: column.id,
-	};
-	notes.push(note);
-
-	return Promise.all([
-		writeBoards(ACCOUNT_ID, boards),
-		writeColumns(ACCOUNT_ID, columns),
-		writeNotes(ACCOUNT_ID, notes),
-	]);
-}
-
 export {
-	initialize,
+	accountByEmail,
 	appendBoard,
 	appendColumn,
 	appendNote,
 	boardById,
 	boardsByAccount,
+	createAccount,
 	deleteBoard,
 	deleteColumn,
 	deleteNote,
 	editColumn,
-	moveColumn,
 	editNote,
+	moveColumn,
 	moveNote,
 	moveNoteToColumn,
+	removeAccount,
 };

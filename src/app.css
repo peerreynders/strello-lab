@@ -58,7 +58,7 @@ input {
 
 input::placeholder {
 	opacity: 1;
-	color: #9ca3af
+	color: #9ca3af;
 }
 
 textarea {
@@ -102,23 +102,23 @@ fieldset {
 
 .loader {
 	width: 18px;
-  height: 18px;
-  border: 2px solid #fff;
-  border-bottom-color: transparent;
-  border-radius: 50%;
-  display: inline-block;
-  box-sizing: border-box;
-  animation: rotation 1s linear infinite;
-  vertical-align: middle
+	height: 18px;
+	border: 2px solid #fff;
+	border-bottom-color: transparent;
+	border-radius: 50%;
+	display: inline-block;
+	box-sizing: border-box;
+	animation: rotation 1s linear infinite;
+	vertical-align: middle;
 }
 
 @keyframes rotation {
 	0% {
-		transform: rotate(0)
+		transform: rotate(0);
 	}
 
 	to {
-		transform: rotate(360deg)
+		transform: rotate(360deg);
 	}
 }
 
@@ -308,15 +308,15 @@ button.c-editable-text {
 		margin-block-start: 0.5rem;
 	}
 	/* sm:mx-30 */
-	@media (min-width: 640px){
+	@media (min-width: 640px) {
 		margin-inline: 7.5rem;
 	}
 	/* md:mx-50 */
-	@media (min-width: 768px){
+	@media (min-width: 768px) {
 		margin-inline: 12.5rem;
 	}
-	/* lg:mx-80 */ 
-	@media (min-width: 1024px){
+	/* lg:mx-80 */
+	@media (min-width: 1024px) {
 		margin-inline: 20rem;
 	}
 	/* xl:mx-80 */
@@ -324,7 +324,7 @@ button.c-editable-text {
 	h2 {
 		/* font-bold */
 		font-weight: 700;
-		/* text-3xl  */ 
+		/* text-3xl  */
 		font-size: 1.875rem;
 		line-height: 2.25rem;
 		/* mb-4 */
@@ -338,9 +338,9 @@ button.c-editable-text {
 	/* border */
 	border-width: 1px;
 	/* border-slate-300 */
-	border-color: rgb(203 213 225 / 1);	
+	border-color: rgb(203 213 225 / 1);
 	/* rounded */
-	border-radius: .25rem;
+	border-radius: 0.25rem;
 	/* bg-slate-100 */
 	background-color: rgb(241 245 249 / 1);
 }
@@ -351,33 +351,33 @@ button.c-editable-text {
 	/* flex */
 	display: flex;
 	/* gap-1 */
-	gap: .25rem;
+	gap: 0.25rem;
 	/* m-1 */
-	margin: .25rem;
+	margin: 0.25rem;
 	label {
 		/* px-4 */
 		padding-inline: 1rem;
 		/* py-2 */
-		padding-block: .5rem;
+		padding-block: 0.5rem;
 		/* grow */
 		flex-grow: 1;
 		/* cursor-pointer */
 		cursor: pointer;
-		/* font-bold */ 
+		/* font-bold */
 		font-weight: 700;
-		/* rounded */ 
-		border-radius: .25rem;
+		/* rounded */
+		border-radius: 0.25rem;
 
 		&.c-login__kind--selected {
 			/* bg-blue-500 */
-			background-color: rgb(59 130 246 / 1) ;
+			background-color: rgb(59 130 246 / 1);
 			/* text-white */
 			color: rgb(255 255 255 / 1);
 		}
 
 		&:hover {
 			/* hover:bg-blue-700 */
-			background-color: rgb(29 78 216 / 1);	
+			background-color: rgb(29 78 216 / 1);
 			/* hover:text-white */
 			color: rgb(255 255 255 / 1);
 		}
@@ -385,7 +385,7 @@ button.c-editable-text {
 
 	input {
 		/* mr-2 */
-		margin-right: .5rem;
+		margin-right: 0.5rem;
 		/* appearance-none */
 		appearance: none;
 	}
@@ -411,19 +411,23 @@ button.c-editable-text {
 	}
 
 	input {
-		/* dark:text-white */ 
+		/* dark:text-white */
 		/* shadow */
-		box-shadow: 0 0 #0000, 0 0 #0000, 0 1px 3px 0 rgb(0 0 0 / .1), 0 1px 2px -1px rgb(0 0 0 / .1);
+		box-shadow:
+			0 0 #0000,
+			0 0 #0000,
+			0 1px 3px 0 rgb(0 0 0 / 0.1),
+			0 1px 2px -1px rgb(0 0 0 / 0.1);
 		/* appearance-none */
 		appearance: none;
 		/* border */
 		border-width: 1px;
 		/* rounded */
-		border-radius: .25rem;
+		border-radius: 0.25rem;
 		/* py-2 */
-		padding-block: .5rem;
+		padding-block: 0.5rem;
 		/* px-3 */
-		padding-inline: .75rem;
+		padding-inline: 0.75rem;
 		/* leading-tight */
 		line-height: 1.25;
 
@@ -439,28 +443,28 @@ button.c-editable-text {
 		/* w-28 */
 		width: 7rem;
 		/* bg-blue-500 */
-		background-color: rgb(59 130 246 / 1) ;
+		background-color: rgb(59 130 246 / 1);
 		/* text-white */
 		color: rgb(255 255 255 / 1);
 		/* font-bold */
 		font-weight: 700;
 		/* py-2 */
-		padding-block: .5rem;
+		padding-block: 0.5rem;
 		/* px-4 */
 		padding-inline: 1rem;
 		/* rounded */
-		border-radius: .25rem;
+		border-radius: 0.25rem;
 
 		&:hover {
 			/* hover:bg-blue-700 */
-			background-color: rgb(29 78 216 / 1);	
+			background-color: rgb(29 78 216 / 1);
 		}
 	}
 
 	p {
 		/* text-red-500 */
-		color:	rgb(239 68 68 / 1); 
-		/* text-center */	
+		color: rgb(239 68 68 / 1);
+		/* text-center */
 		text-align: center;
 	}
 }

@@ -75,7 +75,7 @@ const appendBoard = action(async (data: FormData) => {
 	const title = String(data.get('title'));
 	const color = String(data.get('color'));
 
-	const board = await appendBoardRepo(accountId, undefined, title, color);
+	const board = await appendBoardRepo(accountId, title, color);
 
 	// Compel client to change to new board route
 	throw redirect(`/board/${board.id}`);
@@ -117,7 +117,7 @@ const transformBoard = action(async (c: BoardCommand) => {
 	const accountId = await getAccountId();
 	switch (c.kind) {
 		case 'columnAppend': {
-			await appendColumn(accountId, c.id, c.boardRefId, c.title);
+			await appendColumn(accountId, c.boardRefId, c.title, c.id);
 			return json(true, { revalidate: boardById.key });
 		}
 
@@ -151,7 +151,7 @@ const transformBoard = action(async (c: BoardCommand) => {
 		}
 
 		case 'noteAppend': {
-			await appendNote(accountId, c.id, c.columnRefId, c.body);
+			await appendNote(accountId, c.columnRefId, c.body, c.id);
 			return json(true, { revalidate: boardById.key });
 		}
 
