@@ -40,7 +40,7 @@ export function Column(props: Props) {
 			if (!notesScrollToEnd) return;
 
 			notesScrollToEnd = false;
-			noteContainer && (noteContainer.scrollTop = noteContainer.scrollHeight);
+			if (noteContainer) noteContainer.scrollTop = noteContainer.scrollHeight;
 		})
 	);
 

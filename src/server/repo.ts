@@ -88,6 +88,11 @@ const writeColumns = (accountId: string, columns: Array<ColumnRecord>) =>
 const writeNotes = (accountId: string, notes: Array<NoteRecord>) =>
 	storage.setItem(notesKey(accountId), notes);
 
+async function accountById(accountId: string) {
+	const accounts = await readAccounts();
+	return accounts.find((record) => record.id === accountId);
+}
+
 async function accountByEmail(
 	email: string,
 	password: string,
@@ -283,7 +288,7 @@ function selectBracketRank<T extends { rank: LexRank }>(
 ) {
 	if (before) {
 		const index = fromIndex - 1;
-		return index > 0 ? ranked[index].rank : undefined;
+		return index > -1 ? ranked[index].rank : undefined;
 	}
 	const index = fromIndex + 1;
 	return index < ranked.length ? ranked[index].rank : undefined;
@@ -558,6 +563,7 @@ function moveNote(
 
 export {
 	accountByEmail,
+	accountById,
 	appendBoard,
 	appendColumn,
 	appendNote,

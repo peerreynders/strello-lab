@@ -343,8 +343,8 @@ export function Board(props: Props) {
 			if (!columnsScrollToEnd) return;
 
 			columnsScrollToEnd = false;
-			columnsContainer &&
-				(columnsContainer.scrollLeft = columnsContainer.scrollWidth);
+			if (columnsContainer)
+				columnsContainer.scrollLeft = columnsContainer.scrollWidth;
 		})
 	);
 

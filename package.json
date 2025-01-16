@@ -1,7 +1,7 @@
 {
   "name": "strello-lab",
   "version": "0.0.0",
-	"type": "module",
+  "type": "module",
   "scripts": {
     "dev": "vinxi dev",
     "build": "vinxi build",
@@ -22,13 +22,13 @@
   "bugs": {
     "url": "https://github.com/peerreynders/strello-lab/issues"
   },
-	"dependencies": {
+  "dependencies": {
     "@solidjs/meta": "^0.29.4",
-    "@solidjs/router": "^0.15.0",
-    "@solidjs/start": "^1.0.10",
+    "@solidjs/router": "^0.15.3",
+    "@solidjs/start": "^1.0.11",
     "nanoid": "^5.0.9",
     "solid-js": "^1.9.2",
-    "unstorage": "^1.13.1",
+    "unstorage": "^1.14.4",
     "vinxi": "^0.4.3"
   },
   "engines": {

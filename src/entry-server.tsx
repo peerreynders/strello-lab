@@ -1,6 +1,14 @@
 // @refresh reload
 import { createHandler, StartServer } from '@solidjs/start/server';
 
+import type { SessionManager } from './server/session';
+
+declare module '@solidjs/start/server' {
+	interface RequestEventLocals {
+		session?: SessionManager;
+	}
+}
+
 export default createHandler(() => (
 	<StartServer
 		document={({ assets, children, scripts }) => (

@@ -1,19 +1,10 @@
-import crypto from 'crypto';
+import { fromPassword } from './src/server/session.js';
 import {
 	appendBoard,
 	appendColumn,
 	appendNote,
 	createAccount,
 } from './src/server/repo.js';
-
-function hashPassword(salt: string, password: string) {
-	return crypto.pbkdf2Sync(password, salt, 1000, 64, 'sha256').toString('hex');
-}
-
-function fromPassword(password: string): [salt: string, hash: string] {
-	const salt = crypto.randomBytes(16).toString('hex');
-	return [salt, hashPassword(salt, password)];
-}
 
 async function initialize() {
 	const account = await createAccount(

@@ -1,12 +1,15 @@
 // file: src/components/layout.tsx
 import { Show } from 'solid-js';
+import { createAsync } from '@solidjs/router';
 import { DiscordIcon, GitHubIcon, Logo } from './logo';
+import { getAccount, logout } from '~/server/api.js';
+
 import type { ParentProps } from 'solid-js';
 
 const Login = () => <a href="/login">Login</a>;
 
 export function Layout(props: ParentProps) {
-	const user = () => true;
+	const loggedIn = createAsync(() => getAccount());
 
 	return (
 		<div class="c-layout">
@@ -38,8 +41,8 @@ export function Layout(props: ParentProps) {
 						>
 							<DiscordIcon />
 						</a>
-						<Show when={user()} fallback={<Login />}>
-							<form>
+						<Show when={loggedIn()} fallback={<Login />}>
+							<form action={logout} method="post">
 								<button name="logout" type="submit">
 									Logout
 								</button>

@@ -1,7 +1,10 @@
 // file: src/server/api.ts
+import { getRequestEvent } from 'solid-js/web';
 import { action, json, query, redirect } from '@solidjs/router';
-import { getAccount as getAccountId } from './session.js';
+import { fromPassword, getSession, hashPassword } from './session.js';
 import {
+	accountByEmail,
+	accountById,
 	boardById as bById,
 	boardsByAccount as bByAccount,
 	appendBoard as appendBoardRepo,
@@ -10,12 +13,15 @@ import {
 	deleteBoard as deleteBoardRepo,
 	deleteColumn,
 	deleteNote,
+	createAccount,
 	editColumn,
 	editNote,
 	moveColumn,
 	moveNote,
 	moveNoteToColumn,
 } from './repo.js';
+import { getSessionAccount } from './internal.js';
+import { validateEmailFormat, validatePasswordFormat } from '~/shared/shame.js';
 
 import type {
 	BoardCommand,
@@ -31,10 +37,110 @@ type BoardRecord = BoardResult['board'];
 type ColumnRecord = BoardResult['columns'][number];
 type NoteRecord = BoardResult['notes'][number];
 
+const AUTHENTICATE_KIND = {
+	login: 'login',
+	register: 'register',
+};
+
+const authenticate = action(async (formData: FormData) => {
+	'use server';
+	const event = getRequestEvent();
+	if (!event) return new Error('Server error.');
+
+	// Speed Bump!
+	// Moving this in front of the later session.update
+	// risks flushing headers too early when an error is simply
+	// and quickly returned before other
+	// concurrent ( getAccount, redirectIfAccount) operations
+	// progress
+	let session = event.locals.session;
+	if (!session) {
+		event.locals.session = session = await getSession();
+	}
+
+	const redirectTo = formData.get('redirect-to');
+	if (typeof redirectTo !== 'string')
+		return new Error(
+			`Malformed authenticate action. "redirect-to" parameter: :${redirectTo}.`
+		);
+
+	const kind = formData.get('kind');
+	if (
+		typeof kind !== 'string' ||
+		(kind !== AUTHENTICATE_KIND.login && kind !== AUTHENTICATE_KIND.register)
+	)
+		return new Error(
+			`Malformed authenticate action. "kind" parameter: :${kind}.`
+		);
+
+	let error: string | undefined;
+	const email = formData.get('email');
+	if (typeof email !== 'string' || (error = validateEmailFormat(email)))
+		return new Error(error);
+
+	const password = formData.get('password');
+	if (
+		typeof password !== 'string' ||
+		(error = validatePasswordFormat(password))
+	)
+		return new Error(error);
+
+	let account: Awaited<ReturnType<typeof accountByEmail>>;
+	if (kind === AUTHENTICATE_KIND.login) {
+		account = await accountByEmail(email, password, hashPassword);
+		if (typeof account !== 'object')
+			return new Error("Email or password doesn't match.");
+	} else {
+		account = await createAccount(email, password, fromPassword);
+		if (!account) return new Error('Account already exists');
+	}
+
+	await session.update((record) => {
+		record.accountId = account.id;
+		return record;
+	});
+
+	throw redirect(redirectTo);
+}, 'authenticate');
+
+const logout = action(async () => {
+	'use server';
+	const event = getRequestEvent();
+	if (!event) throw new Error('logout: request event unavailable');
+
+	let session = event.locals.session;
+	if (!session) {
+		event.locals.session = session = await getSession();
+	}
+	await session.clear();
+
+	throw redirect('/login');
+}, 'logout');
+
+// For `/login` preload
+const redirectIfAccount = query(async () => {
+	'use server';
+	const accountId = await getSessionAccount('redirectIfAccount');
+	if (accountId) throw redirect('/');
+
+	return null;
+}, 'redirect-account');
+
+const hasAccountSession = query(async () => {
+	'use server';
+	const accountId = await getSessionAccount('hasAccountSession');
+	return Boolean(accountId);
+}, 'session-account');
+
 const getAccount = query(async () => {
 	'use server';
-	const accountId = await getAccountId();
-	return { id: accountId, email: 'start@solidjs.com' };
+	const accountId = await getSessionAccount('getAccount');
+	if (!accountId) throw redirect('/login');
+
+	const record = await accountById(accountId);
+	if (!record) throw redirect('/login');
+
+	return { id: record.id, email: record.email };
 }, 'account');
 
 const fromBoardRecord = (r: BoardRecord): BoardInfo => ({
@@ -64,14 +170,18 @@ const fromNoteRecord = (r: NoteRecord): NoteInfo => ({
 
 const boardsByAccount = query(async () => {
 	'use server';
-	const accountId = await getAccountId();
+	const accountId = await getSessionAccount('boardsByAccount');
+	if (!accountId) throw redirect('/login');
+
 	const boards = await bByAccount(accountId);
 	return boards.map(fromBoardRecord);
 }, 'boards-by-account');
 
 const appendBoard = action(async (data: FormData) => {
 	'use server';
-	const accountId = await getAccountId();
+	const accountId = await getSessionAccount('appendBoard');
+	if (!accountId) throw redirect('/login');
+
 	const title = String(data.get('title'));
 	const color = String(data.get('color'));
 
@@ -83,7 +193,8 @@ const appendBoard = action(async (data: FormData) => {
 
 const deleteBoard = action(async (c: BoardDelete) => {
 	'use server';
-	const accountId = await getAccountId();
+	const accountId = await getSessionAccount('deleteBoard');
+	if (!accountId) throw redirect('/login');
 
 	// TODO this can throw for
 	// non-existent board (stale post-delete)
@@ -95,9 +206,10 @@ const deleteBoard = action(async (c: BoardDelete) => {
 
 const boardById = query(async (id: string) => {
 	'use server';
-	const accountId = await getAccountId();
-	const result = await bById(accountId, id);
+	const accountId = await getSessionAccount('boardById');
+	if (!accountId) throw redirect('/login');
 
+	const result = await bById(accountId, id);
 	if (!result) {
 		// TODO: force logout first
 		throw redirect('/login');
@@ -114,7 +226,9 @@ const boardById = query(async (id: string) => {
 
 const transformBoard = action(async (c: BoardCommand) => {
 	'use server';
-	const accountId = await getAccountId();
+	const accountId = await getSessionAccount('transformBoard');
+	if (!accountId) throw redirect('/login');
+
 	switch (c.kind) {
 		case 'columnAppend': {
 			await appendColumn(accountId, c.boardRefId, c.title, c.id);
@@ -195,10 +309,15 @@ const transformBoard = action(async (c: BoardCommand) => {
 }, 'transform-board');
 
 export {
+	AUTHENTICATE_KIND,
 	appendBoard,
+	authenticate,
 	boardById,
 	boardsByAccount,
 	deleteBoard,
 	getAccount,
+	hasAccountSession,
+	logout,
+	redirectIfAccount,
 	transformBoard,
 };

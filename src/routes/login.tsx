@@ -1,25 +1,34 @@
 // file: src/routes/login.tsx
 import { Show, createSignal } from 'solid-js';
+import { useSubmission } from '@solidjs/router';
 import { Title } from '@solidjs/meta';
+import {
+	AUTHENTICATE_KIND,
+	authenticate,
+	redirectIfAccount,
+} from '~/server/api.js';
 import { makeFocusRef } from '~/shared/shame.js';
 
-import type { RouteSectionProps } from '@solidjs/router';
+import type { RouteDefinition, RouteSectionProps } from '@solidjs/router';
 
-const KIND_LOGIN = 'login';
 const INITIAL_IS_LOGIN = true;
 
+export const route = {
+	preload: () => redirectIfAccount(),
+} satisfies RouteDefinition;
+
 export default function Login(props: RouteSectionProps) {
-	const loggingIn: { pending: boolean; result?: { message: string } } = {
-		pending: false,
-		result: {
-			message: 'Password must be at least 6 characters.',
-		},
+	const redirectTo = () => {
+		const target = props.location.query['redirect-to'];
+		return target ? target : '/';
 	};
+
+	const loggingIn = useSubmission(authenticate);
 
 	const emailInput = makeFocusRef();
 	const [isLogin, setIsLogin] = createSignal(INITIAL_IS_LOGIN);
 	const selectKind = (e: Event & { currentTarget: HTMLInputElement }) => {
-		setIsLogin(e.currentTarget.value === KIND_LOGIN);
+		setIsLogin(e.currentTarget.value === AUTHENTICATE_KIND.login);
 	};
 
 	const classKindSelected = (forLogin: boolean) =>
@@ -29,18 +38,14 @@ export default function Login(props: RouteSectionProps) {
 		<main class="p-login">
 			<Title>Login/Register | Strello</Title>
 			<h2>Sign in to Strello</h2>
-			<form class="c-login" method="post">
-				<input
-					type="hidden"
-					name="redirectto"
-					value={props.params.redirectto ?? '/'}
-				/>
+			<form action={authenticate} class="c-login" method="post">
+				<input type="hidden" name="redirect-to" value={redirectTo()} />
 				<fieldset class="c-login__kind">
 					<label class={classKindSelected(true)}>
 						<input
 							type="radio"
 							name="kind"
-							value={KIND_LOGIN}
+							value={AUTHENTICATE_KIND.login}
 							checked={INITIAL_IS_LOGIN}
 							onChange={selectKind}
 						/>
@@ -50,7 +55,7 @@ export default function Login(props: RouteSectionProps) {
 						<input
 							type="radio"
 							name="kind"
-							value="register"
+							value={AUTHENTICATE_KIND.register}
 							onChange={selectKind}
 						/>
 						Register
