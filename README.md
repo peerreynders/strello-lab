@@ -4,7 +4,9 @@ Gaining understanding by dissecting the relevant parts of the SolidStart [Strell
 
 ```bash
 ~$ cd strello-lab
+
 ~/strello-lab$ pnpm install
+
 Lockfile is up to date, resolution step is skipped
 Packages: +552
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -12,11 +14,11 @@ Progress: resolved 552, reused 552, downloaded 0, added 552, done
 
 dependencies:
 + @solidjs/meta 0.29.4
-+ @solidjs/router 0.15.1
-+ @solidjs/start 1.0.10
++ @solidjs/router 0.15.3
++ @solidjs/start 1.0.11
 + nanoid 5.0.9
-+ solid-js 1.9.3
-+ unstorage 1.13.1
++ solid-js 1.9.4
++ unstorage 1.14.4
 + vinxi 0.4.3
 
 devDependencies:
@@ -28,25 +30,29 @@ devDependencies:
 + typescript 5.7.2
 + typescript-eslint 8.18.0
 
-Done in 1.5s
+Done in 1.7s
+
+~/strello-lab$ mv example.env .env
+
 ~/strello-lab$ pnpm run init-repo
 
-> strello-lab@ init-repo /strello-lab
-> node --import ts-blank-space/register ./init-repo.ts
+> strello-lab@0.0.0 init-repo ~/strello-lab
+> node --env-file=.env --import ts-blank-space/register ./init-repo.ts
 
 ~/strello-lab$ pnpm run dev
 
-> example-basic@ dev /strello-lab
+> strello-lab@0.0.0 dev ~/strello-lab
 > vinxi dev
 
 vinxi v0.4.3
 vinxi starting dev server
 
  WARN  No valid compatibility date is specified.
- Using 2024-04-03 as fallback.
+
+ℹ Using 2024-04-03 as fallback.
   Please specify compatibility date to avoid unwanted behavior changes:
-     - Add compatibilityDate: '2024-12-11' to the config file.
-     - Or set COMPATIBILITY_DATE=2024-12-11 environment variable.
+     - Add compatibilityDate: '2025-01-16' to the config file.
+     - Or set COMPATIBILITY_DATE=2025-01-16 environment variable.
 
 
   ➜ Local:    http://localhost:3000/

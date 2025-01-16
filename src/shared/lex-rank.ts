@@ -1,4 +1,5 @@
 // file: src/lex-rank
+// https://github.com/peerreynders/lex-rank
 declare const validLexRank: unique symbol;
 
 export type LexRank = string & {

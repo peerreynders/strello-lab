@@ -9,7 +9,7 @@
     "version": "vinxi version",
     "format": "prettier --write ./src eslint.config.js app.config.ts init-repo.ts",
     "lint:es": "eslint --config ./eslint.config.js",
-    "init-repo": "node --import ts-blank-space/register ./init-repo.ts"
+    "init-repo": "node --env-file=.env --import ts-blank-space/register ./init-repo.ts"
   },
   "repository": {
     "type": "git",
